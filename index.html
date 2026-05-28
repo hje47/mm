@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가계부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F7F5F0;
+  --bg2:#EDEAE3;
+  --bg3:#E2DED5;
+  --surface:#FFFFFF;
+  --border:#D8D4CB;
+  --border2:#C8C4BA;
+  --text1:#1A1916;
+  --text2:#5A5750;
+  --text3:#8A8780;
+  --teal:#0F6E56;--teal-bg:#E1F5EE;--teal-mid:#5DCAA5;--teal-border:#9FE1CB;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--blue-mid:#85B7EB;--blue-border:#B5D4F4;
+  --purple:#534AB7;--purple-bg:#EEEDFE;--purple-border:#CECBF6;
+  --coral:#993C1D;--coral-bg:#FAECE7;--coral-border:#F5C4B3;
+  --amber:#854F0B;--amber-bg:#FAEEDA;--amber-border:#FAC775;
+  --green:#3B6D11;--green-bg:#EAF3DE;--green-border:#C0DD97;
+  --pink:#993556;--pink-bg:#FBEAF0;--pink-border:#F4C0D1;
+  --gray:#5F5E5A;--gray-bg:#F1EFE8;--gray-border:#D3D1C7;
+  --red:#D85A30;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:18px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.05);
+  --font:'Noto Sans KR',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+html{font-size:16px;background:var(--bg)}
+body{font-family:var(--font);color:var(--text1);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.container{max-width:680px;margin:0 auto;padding:0 16px 80px}
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+.header{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  padding:16px 16px 0;
+  margin:0 -16px;
+}
+.header-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:14px;
+  border-bottom:1.5px solid var(--border);
+}
+.month-nav{display:flex;align-items:center;gap:10px}
+.nav-btn{
+  width:34px;height:34px;border-radius:var(--radius-md);
+  border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--text2);font-size:16px;transition:all .15s;
+}
+.nav-btn:hover{background:var(--bg2);border-color:var(--border2)}
+.month-label{font-size:18px;font-weight:600;color:var(--text1);min-width:108px;text-align:center}
+.save-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:var(--radius-md);
+  border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);
+  font-family:var(--font);transition:all .15s;
+}
+.save-btn:hover{background:var(--bg2)}
+.save-btn.saved{background:var(--teal-bg);border-color:var(--teal-border);color:var(--teal)}
+
+/* ═══════════════════════════════════════════
+   SUMMARY CARDS
+═══════════════════════════════════════════ */
+.summary-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  padding:14px 0 0;
+}
+@media(max-width:480px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.metric{
+  border-radius:var(--radius-md);padding:12px;
+  border:1px solid transparent;
+}
+.metric-label{font-size:11px;font-weight:500;margin-bottom:5px;letter-spacing:.02em}
+.metric-value{font-size:17px;font-weight:600;font-family:var(--mono)}
+@media(max-width:400px){.metric-value{font-size:14px}}
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+.tabs-wrap{
+  position:sticky;top:70px;z-index:99;
+  background:var(--bg);padding:12px 0 0;margin:0 -16px;padding-left:16px;padding-right:16px;
+}
+.tabs{
+  display:flex;gap:2px;
+  background:var(--bg2);border-radius:var(--radius-lg);padding:3px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1;min-width:fit-content;
+  padding:8px 12px;border-radius:var(--radius-md);
+  font-size:13px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;white-space:nowrap;text-align:center;
+  border:none;background:none;font-family:var(--font);
+}
+.tab.active{background:var(--surface);color:var(--text1);box-shadow:var(--shadow)}
+
+/* ═══════════════════════════════════════════
+   TAB CONTENT
+═══════════════════════════════════════════ */
+.tab-content{display:none;padding-top:14px}
+.tab-content.active{display:block}
+
+/* ═══════════════════════════════════════════
+   CATEGORY CARDS
+═══════════════════════════════════════════ */
+.cat-card{
+  border-radius:var(--radius-xl);border:1px solid var(--border);
+  background:var(--surface);margin-bottom:10px;overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.cat-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 15px;cursor:pointer;user-select:none;
+}
+.cat-header-left{display:flex;align-items:center;gap:10px}
+.cat-icon{
+  width:34px;height:34px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.cat-title{font-size:14px;font-weight:600}
+.cat-sub{font-size:11px;margin-top:2px;font-weight:400}
+.cat-right{display:flex;align-items:center;gap:8px}
+.cat-total{font-size:14px;font-weight:600;font-family:var(--mono)}
+.chev{font-size:14px;color:var(--text3);transition:transform .2s}
+.chev.open{transform:rotate(180deg)}
+.cat-body{border-top:1px solid;padding:6px 15px 12px;display:none}
+.cat-body.open{display:block}
+
+/* ═══════════════════════════════════════════
+   ROWS & INPUTS
+═══════════════════════════════════════════ */
+.row{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 0;border-bottom:1px solid var(--border);
+}
+.row:last-of-type{border-bottom:none}
+.row-label{flex:1;font-size:13px;color:var(--text1)}
+.row-sub-text{font-size:11px;color:var(--text3);margin-top:1px}
+.row-input{
+  width:118px;text-align:right;font-size:13px;font-family:var(--mono);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:5px 8px;background:var(--bg);color:var(--text1);
+  transition:border-color .15s;
+}
+.row-input:focus{outline:none;border-color:var(--blue-mid);background:var(--surface)}
+.row-input::placeholder{color:var(--text3)}
+@media(max-width:400px){.row-input{width:100px;font-size:12px}}
+
+/* 공제 섹션 */
+.ded-section{
+  background:var(--bg);border-radius:var(--radius-md);
+  padding:10px 12px;margin:8px 0;
+}
+.ded-title{
+  font-size:10px;font-weight:600;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;
+}
+.ded-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.ded-row:last-child{border-bottom:none}
+.ded-label{flex:1;font-size:12px;color:var(--text2)}
+.ded-input{
+  width:100px;text-align:right;font-size:12px;font-family:var(--mono);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:4px 7px;background:var(--surface);color:var(--text1);
+}
+.ded-input:focus{outline:none;border-color:var(--blue-mid)}
+
+/* 합계 행 */
+.subtotal-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0 2px;margin-top:5px;border-top:1px solid;
+}
+.subtotal-label{font-size:13px;font-weight:600}
+.subtotal-value{font-size:14px;font-weight:700;font-family:var(--mono)}
+
+/* 주식 그리드 */
+.stock-header-row{
+  display:grid;grid-template-columns:70px 1fr 1fr;gap:6px;
+  padding:4px 0 2px;
+}
+.stock-col-label{font-size:10px;font-weight:600;color:var(--text3);text-align:center;text-transform:uppercase;letter-spacing:.05em}
+.stock-row{
+  display:grid;grid-template-columns:70px 1fr 1fr;gap:6px;
+  align-items:center;padding:5px 0;border-bottom:1px solid var(--border);
+}
+.stock-row:last-child{border-bottom:none}
+.stock-name{font-size:12px;font-weight:600;color:var(--blue)}
+
+/* 기타수입 추가버튼 */
+.add-btn{
+  width:100%;padding:8px;margin-top:8px;
+  border:1.5px dashed var(--border2);border-radius:var(--radius-md);
+  background:none;cursor:pointer;font-size:12px;color:var(--text3);
+  font-family:var(--font);transition:all .15s;
+}
+.add-btn:hover{border-color:var(--blue-mid);color:var(--blue);background:var(--blue-bg)}
+.etc-del-btn{
+  background:none;border:none;cursor:pointer;color:var(--text3);
+  font-size:16px;padding:0 4px;line-height:1;
+}
+
+/* ═══════════════════════════════════════════
+   CARD COLOR THEMES
+═══════════════════════════════════════════ */
+.teal-card{border-color:var(--teal-border)!important}
+.teal-card .cat-header{background:var(--teal-bg)}
+.teal-card .cat-body{border-color:var(--teal-border)}
+.teal-card .cat-icon{background:var(--teal-border);color:var(--teal)}
+.teal-card .cat-title{color:#085041}.teal-card .cat-sub{color:var(--teal)}
+.teal-card .cat-total{color:var(--teal)}
+.teal-card .subtotal-row{border-color:var(--teal-border)}
+.teal-card .subtotal-label{color:#085041}.teal-card .subtotal-value{color:var(--teal)}
+
+.blue-card{border-color:var(--blue-border)!important}
+.blue-card .cat-header{background:var(--blue-bg)}
+.blue-card .cat-body{border-color:var(--blue-border)}
+.blue-card .cat-icon{background:var(--blue-border);color:var(--blue)}
+.blue-card .cat-title{color:#0C447C}.blue-card .cat-sub{color:var(--blue)}
+.blue-card .cat-total{color:var(--blue)}
+.blue-card .subtotal-row{border-color:var(--blue-border)}
+.blue-card .subtotal-label{color:#0C447C}.blue-card .subtotal-value{color:var(--blue)}
+
+.purple-card{border-color:var(--purple-border)!important}
+.purple-card .cat-header{background:var(--purple-bg)}
+.purple-card .cat-body{border-color:var(--purple-border)}
+.purple-card .cat-icon{background:var(--purple-border);color:var(--purple)}
+.purple-card .cat-title{color:#3C3489}.purple-card .cat-sub{color:var(--purple)}
+.purple-card .cat-total{color:var(--purple)}
+.purple-card .subtotal-row{border-color:var(--purple-border)}
+.purple-card .subtotal-label{color:#3C3489}.purple-card .subtotal-value{color:var(--purple)}
+
+.coral-card{border-color:var(--coral-border)!important}
+.coral-card .cat-header{background:var(--coral-bg)}
+.coral-card .cat-body{border-color:var(--coral-border)}
+.coral-card .cat-icon{background:var(--coral-border);color:var(--coral)}
+.coral-card .cat-title{color:#712B13}.coral-card .cat-sub{color:var(--coral)}
+.coral-card .cat-total{color:var(--coral)}
+.coral-card .subtotal-row{border-color:var(--coral-border)}
+.coral-card .subtotal-label{color:#712B13}.coral-card .subtotal-value{color:var(--coral)}
+
+.amber-card{border-color:var(--amber-border)!important}
+.amber-card .cat-header{background:var(--amber-bg)}
+.amber-card .cat-body{border-color:var(--amber-border)}
+.amber-card .cat-icon{background:var(--amber-border);color:var(--amber)}
+.amber-card .cat-title{color:#633806}.amber-card .cat-sub{color:var(--amber)}
+.amber-card .cat-total{color:var(--amber)}
+.amber-card .subtotal-row{border-color:var(--amber-border)}
+.amber-card .subtotal-label{color:#633806}.amber-card .subtotal-value{color:var(--amber)}
+
+.green-card{border-color:var(--green-border)!important}
+.green-card .cat-header{background:var(--green-bg)}
+.green-card .cat-body{border-color:var(--green-border)}
+.green-card .cat-icon{background:var(--green-border);color:var(--green)}
+.green-card .cat-title{color:#27500A}.green-card .cat-sub{color:var(--green)}
+.green-card .cat-total{color:var(--green)}
+.green-card .subtotal-row{border-color:var(--green-border)}
+.green-card .subtotal-label{color:#27500A}.green-card .subtotal-value{color:var(--green)}
+
+.pink-card{border-color:var(--pink-border)!important}
+.pink-card .cat-header{background:var(--pink-bg)}
+.pink-card .cat-body{border-color:var(--pink-border)}
+.pink-card .cat-icon{background:var(--pink-border);color:var(--pink)}
+.pink-card .cat-title{color:#72243E}.pink-card .cat-sub{color:var(--pink)}
+.pink-card .cat-total{color:var(--pink)}
+.pink-card .subtotal-row{border-color:var(--pink-border)}
+.pink-card .subtotal-label{color:#72243E}.pink-card .subtotal-value{color:var(--pink)}
+
+.gray-card{border-color:var(--gray-border)!important}
+.gray-card .cat-header{background:var(--gray-bg)}
+.gray-card .cat-body{border-color:var(--gray-border)}
+.gray-card .cat-icon{background:var(--gray-border);color:var(--gray)}
+.gray-card .cat-title{color:#2C2C2A}.gray-card .cat-sub{color:var(--gray)}
+.gray-card .cat-total{color:var(--gray)}
+.gray-card .subtotal-row{border-color:var(--gray-border)}
+.gray-card .subtotal-label{color:#2C2C2A}.gray-card .subtotal-value{color:var(--gray)}
+
+/* ═══════════════════════════════════════════
+   저축/투자 탭 - 자산 현황
+═══════════════════════════════════════════ */
+.asset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:12px}
+.asset-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:11px 13px;
+  box-shadow:var(--shadow);
+}
+.asset-card.total{background:var(--teal-bg);border-color:var(--teal-border)}
+.asset-label{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500}
+.asset-card.total .asset-label{color:var(--teal)}
+.asset-value{font-size:14px;font-weight:600;color:var(--text1);font-family:var(--mono)}
+.asset-card.total .asset-value{color:var(--teal)}
+
+/* ═══════════════════════════════════════════
+   종합 분석
+═══════════════════════════════════════════ */
+.net-banner{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:16px 18px;
+  box-shadow:var(--shadow);margin-bottom:12px;
+}
+.net-banner-item .label{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500}
+.net-banner-item .value{font-size:24px;font-weight:700;font-family:var(--mono)}
+
+.prog-section{margin-bottom:12px}
+.prog-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:14px 16px;
+  box-shadow:var(--shadow);
+}
+.prog-item{margin-bottom:13px}
+.prog-item:last-child{margin-bottom:0}
+.prog-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;align-items:baseline}
+.prog-head .plabel{color:var(--text2);font-weight:500}
+.prog-head .pval{color:var(--text1);font-weight:600;font-family:var(--mono);font-size:11px}
+.prog-head .pbadge{
+  font-size:10px;padding:1px 6px;border-radius:20px;font-weight:600;margin-left:5px;
+}
+.prog-bar{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.chart-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:14px;box-shadow:var(--shadow);
+}
+.chart-card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.chart-wrap{position:relative;height:160px}
+.legend{margin-top:10px;display:flex;flex-direction:column;gap:3px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+.trend-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:14px;box-shadow:var(--shadow);margin-bottom:12px;
+}
+.trend-card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.trend-wrap{position:relative;height:180px}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--text1);color:#fff;padding:10px 18px;border-radius:30px;
+  font-size:13px;font-weight:500;z-index:999;transition:transform .3s ease;pointer-events:none;
+  white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="month-nav">
+        <button class="nav-btn" onclick="changeMonth(-1)" aria-label="이전달"><i class="ti ti-chevron-left"></i></button>
+        <div class="month-label" id="monthLabel"></div>
+        <button class="nav-btn" onclick="changeMonth(1)" aria-label="다음달"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <button class="save-btn" id="saveBtn" onclick="saveMonth()">
+        <i class="ti ti-device-floppy" style="font-size:15px"></i> 저장
+      </button>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-grid">
+      <div class="metric" style="background:var(--teal-bg);border-color:var(--teal-border)">
+        <div class="metric-label" style="color:var(--teal)">총 수익</div>
+        <div class="metric-value" style="color:#085041" id="sm_income">-</div>
+      </div>
+      <div class="metric" style="background:var(--coral-bg);border-color:var(--coral-border)">
+        <div class="metric-label" style="color:var(--coral)">총 지출</div>
+        <div class="metric-value" style="color:#712B13" id="sm_expense">-</div>
+      </div>
+      <div class="metric" style="background:var(--blue-bg);border-color:var(--blue-border)">
+        <div class="metric-label" style="color:var(--blue)">저축/투자</div>
+        <div class="metric-value" style="color:#0C447C" id="sm_saving">-</div>
+      </div>
+      <div class="metric" style="background:var(--purple-bg);border-color:var(--purple-border)">
+        <div class="metric-label" style="color:var(--purple)">잔여</div>
+        <div class="metric-value" id="sm_net">-</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs-wrap" style="position:relative;top:auto;padding:10px 0 0">
+      <div class="tabs" role="tablist">
+        <button class="tab active" onclick="switchTab('income',this)" role="tab">수익</button>
+        <button class="tab" onclick="switchTab('expense',this)" role="tab">지출</button>
+        <button class="tab" onclick="switchTab('saving',this)" role="tab">저축/투자</button>
+        <button class="tab" onclick="switchTab('overview',this)" role="tab">종합 분석</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 수익 탭 ─────────────────────────── -->
+  <div id="incomeTab" class="tab-content active">
+
+    <!-- 근로소득 -->
+    <div class="cat-card teal-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-briefcase"></i></div>
+          <div><div class="cat-title">근로소득</div><div class="cat-sub">실수령액 기준</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="i_labor_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label">기본급+식대</div><input class="row-input" id="i_base" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">인센티브</div><input class="row-input" id="i_incentive" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">직책수당</div><input class="row-input" id="i_position" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">기타수당</div><input class="row-input" id="i_etc_wage" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="ded-section">
+          <div class="ded-title">공제 항목</div>
+          <div class="ded-row"><div class="ded-label">국민연금</div><input class="ded-input row-input" id="i_pension" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">건강보험</div><input class="ded-input row-input" id="i_health" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">고용보험</div><input class="ded-input row-input" id="i_employ" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">소득세</div><input class="ded-input row-input" id="i_income_tax" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">지방소득세</div><input class="ded-input row-input" id="i_local_tax" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">건강보험정산</div><input class="ded-input row-input" id="i_health_adj" type="number" placeholder="0" oninput="calc()"></div>
+          <div class="ded-row"><div class="ded-label">기타공제</div><input class="ded-input row-input" id="i_etc_ded" type="number" placeholder="0" oninput="calc()"></div>
+        </div>
+        <div class="subtotal-row">
+          <span class="subtotal-label">실수령액</span>
+          <span class="subtotal-value" id="i_labor_net">0원</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 주식소득 -->
+    <div class="cat-card blue-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-chart-candle"></i></div>
+          <div><div class="cat-title">주식소득</div><div class="cat-sub">토스·나무·한국투자</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="i_stock_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="stock-header-row">
+          <div></div>
+          <div class="stock-col-label">수익</div>
+          <div class="stock-col-label">배당금</div>
+        </div>
+        <div class="stock-row">
+          <div class="stock-name">토스</div>
+          <input class="row-input" id="i_toss_p" type="number" placeholder="0" oninput="calc()" style="width:100%">
+          <input class="row-input" id="i_toss_d" type="number" placeholder="0" oninput="calc()" style="width:100%">
+        </div>
+        <div class="stock-row">
+          <div class="stock-name">나무</div>
+          <input class="row-input" id="i_namu_p" type="number" placeholder="0" oninput="calc()" style="width:100%">
+          <input class="row-input" id="i_namu_d" type="number" placeholder="0" oninput="calc()" style="width:100%">
+        </div>
+        <div class="stock-row">
+          <div class="stock-name">한투</div>
+          <input class="row-input" id="i_ki_p" type="number" placeholder="0" oninput="calc()" style="width:100%">
+          <input class="row-input" id="i_ki_d" type="number" placeholder="0" oninput="calc()" style="width:100%">
+        </div>
+        <div class="subtotal-row">
+          <span class="subtotal-label">주식소득 합계</span>
+          <span class="subtotal-value" id="i_stock_total">0원</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 기타수입 -->
+    <div class="cat-card purple-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-coins"></i></div>
+          <div><div class="cat-title">기타수입</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="i_etc_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div id="etcRows"></div>
+        <button class="add-btn" onclick="addEtc()"><i class="ti ti-plus" style="font-size:12px;vertical-align:-1px"></i> 항목 추가</button>
+        <div class="subtotal-row">
+          <span class="subtotal-label">기타수입 합계</span>
+          <span class="subtotal-value" id="i_etc_total">0원</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 지출 탭 ─────────────────────────── -->
+  <div id="expenseTab" class="tab-content">
+
+    <div class="cat-card coral-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-home"></i></div>
+          <div><div class="cat-title">고정지출</div><div class="cat-sub">보험·대출·월세·관리비</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_fixed_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label"><div>KB실손보험</div><div class="row-sub-text">15일 자동이체</div></div><input class="row-input" id="e_ins_real" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>KB일상생활손해보험</div><div class="row-sub-text">15일 자동이체</div></div><input class="row-input" id="e_ins_daily" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>신한라이프생명보험</div><div class="row-sub-text">20일 신한카드</div></div><input class="row-input" id="e_ins_life" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>KB대출이자(중기청)</div><div class="row-sub-text">13일 / 이자 3.1%</div></div><input class="row-input" id="e_loan" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>월세</div><div class="row-sub-text">24일 계좌이체</div></div><input class="row-input" id="e_rent" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>인터넷(그리드)</div><div class="row-sub-text">10일</div></div><input class="row-input" id="e_internet" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>관리비(전기세 포함)</div><div class="row-sub-text">30일 신한카드</div></div><input class="row-input" id="e_mgmt" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>가스비</div><div class="row-sub-text">10일 신한카드</div></div><input class="row-input" id="e_gas" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">합계</span><span class="subtotal-value" id="e_fixed_total">0원</span></div>
+      </div>
+    </div>
+
+    <div class="cat-card amber-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-shopping-bag"></i></div>
+          <div><div class="cat-title">생활비</div><div class="cat-sub">기준 560,000원</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_living_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label">핸드폰</div><input class="row-input" id="e_phone" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">가족</div><input class="row-input" id="e_family" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">생활/쇼핑</div><input class="row-input" id="e_shopping" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">교통</div><input class="row-input" id="e_trans" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">기타</div><input class="row-input" id="e_living_etc" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">합계</span><span class="subtotal-value" id="e_living_total">0원</span></div>
+      </div>
+    </div>
+
+    <div class="cat-card green-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-run"></i></div>
+          <div><div class="cat-title">운동</div><div class="cat-sub">기준 206,500원</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_exercise_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label"><div>테니스</div><div class="row-sub-text">4회 수강료</div></div><input class="row-input" id="e_tennis" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>헬스</div><div class="row-sub-text">S휘트니스</div></div><input class="row-input" id="e_gym" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">합계</span><span class="subtotal-value" id="e_exercise_total">0원</span></div>
+      </div>
+    </div>
+
+    <div class="cat-card pink-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-tools-kitchen-2"></i></div>
+          <div><div class="cat-title">식비</div><div class="cat-sub">기준 450,000원</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_food_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label">커피·간식·외식·술·식재료</div><input class="row-input" id="e_food" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">합계</span><span class="subtotal-value" id="e_food_total">0원</span></div>
+      </div>
+    </div>
+
+    <div class="cat-card gray-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-device-mobile"></i></div>
+          <div><div class="cat-title">구독</div><div class="cat-sub">기준 20,883원</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_sub_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label"><div>쿠팡</div><div class="row-sub-text">13일</div></div><input class="row-input" id="e_coupang" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>유튜브</div><div class="row-sub-text">15일 인도계정</div></div><input class="row-input" id="e_youtube" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>토스페이</div><div class="row-sub-text">30일</div></div><input class="row-input" id="e_toss_pay" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>배민클럽</div><div class="row-sub-text">26일</div></div><input class="row-input" id="e_baemin" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">합계</span><span class="subtotal-value" id="e_sub_total">0원</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 저축/투자 탭 ──────────────────── -->
+  <div id="savingTab" class="tab-content">
+    <div class="asset-grid">
+      <div class="asset-card"><div class="asset-label">토스굴비적금</div><div class="asset-value">900,000원</div></div>
+      <div class="asset-card"><div class="asset-label">토스비상금</div><div class="asset-value">2,713,342원</div></div>
+      <div class="asset-card"><div class="asset-label">토스증권</div><div class="asset-value">10,555,356원</div></div>
+      <div class="asset-card"><div class="asset-label">NH CMA</div><div class="asset-value">24,177,553원</div></div>
+      <div class="asset-card"><div class="asset-label">한투 ISA</div><div class="asset-value">20,021,754원</div></div>
+      <div class="asset-card"><div class="asset-label">한투 연금저축</div><div class="asset-value">13,447,140원</div></div>
+      <div class="asset-card total"><div class="asset-label">총 자산 (26.05 기준)</div><div class="asset-value">77,522,507원</div></div>
+    </div>
+
+    <div class="cat-card blue-card">
+      <div class="cat-header" onclick="toggleCard(this)">
+        <div class="cat-header-left">
+          <div class="cat-icon"><i class="ti ti-piggy-bank"></i></div>
+          <div><div class="cat-title">이번 달 저축/투자</div><div class="cat-sub">기준 1,200,000원+</div></div>
+        </div>
+        <div class="cat-right"><span class="cat-total" id="e_saving_hd">0원</span><i class="ti ti-chevron-down chev open"></i></div>
+      </div>
+      <div class="cat-body open">
+        <div class="row"><div class="row-label"><div>토스 굴비적금</div><div class="row-sub-text">연 4.5%</div></div><input class="row-input" id="s_toss_save" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">토스 비상금</div><input class="row-input" id="s_toss_emg" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label">토스증권</div><input class="row-input" id="s_toss_stock" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>NH CMA</div><div class="row-sub-text">연 3%+</div></div><input class="row-input" id="s_nh" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>한투 ISA</div><div class="row-sub-text">연 2,000만원 한도</div></div><input class="row-input" id="s_isa" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="row"><div class="row-label"><div>한투 연금저축</div><div class="row-sub-text">16.5% 세액공제</div></div><input class="row-input" id="s_pension" type="number" placeholder="0" oninput="calc()"></div>
+        <div class="subtotal-row"><span class="subtotal-label">저축/투자 합계</span><span class="subtotal-value" id="e_saving_total">0원</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 종합 분석 탭 ──────────────────── -->
+  <div id="overviewTab" class="tab-content">
+    <div class="net-banner">
+      <div class="net-banner-item">
+        <div class="label">이번 달 순수익</div>
+        <div class="value" id="ov_net">0원</div>
+      </div>
+      <div class="net-banner-item" style="text-align:right">
+        <div class="label">저축률</div>
+        <div class="value" style="color:var(--blue)" id="ov_save_rate">0%</div>
+      </div>
+    </div>
+
+    <div class="prog-section">
+      <div class="prog-card" id="progSection"></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">수익 구성</div>
+        <div class="chart-wrap"><canvas id="incomeChart"></canvas></div>
+        <div class="legend" id="incomeLegend"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">지출 구성</div>
+        <div class="chart-wrap"><canvas id="expenseChart"></canvas></div>
+        <div class="legend" id="expenseLegend"></div>
+      </div>
+    </div>
+
+    <div class="trend-card">
+      <div class="trend-card-title">월별 수익 vs 지출+저축 추이</div>
+      <div class="trend-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════
+// 엑셀 데이터
+// ═══════════════════════════════════
+const XLSX_DATA = {
+  "2024-09":{i_base:3175000,i_incentive:500000,i_position:0,i_etc_wage:500000,i_pension:132790,i_health:119810,i_employ:36220,i_income_tax:19860,i_local_tax:1980,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:0,e_ins_daily:0,e_ins_life:0,e_loan:0,e_rent:0,e_internet:0,e_mgmt:0,e_gas:0,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:0,e_gym:0,e_food:0,e_coupang:0,e_youtube:0,e_toss_pay:0,e_baemin:0,s_toss_save:0,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2024-10":{i_base:3175000,i_incentive:550000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:119810,i_employ:32170,i_income_tax:13450,i_local_tax:1340,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:241667,e_rent:100000,e_internet:17000,e_mgmt:79720,e_gas:6000,e_phone:114980,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:3152,e_toss_pay:5000,e_baemin:0,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2024-11":{i_base:3175000,i_incentive:430000,i_position:0,i_etc_wage:1028000,i_pension:132790,i_health:119810,i_employ:40340,i_income_tax:26000,i_local_tax:2600,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:245620,e_rent:100000,e_internet:17000,e_mgmt:78150,e_gas:8000,e_phone:109500,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:4961,e_toss_pay:5000,e_baemin:0,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2024-12":{i_base:3175000,i_incentive:306000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:119810,i_employ:29970,i_income_tax:10520,i_local_tax:1050,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:237700,e_rent:100000,e_internet:17000,e_mgmt:75410,e_gas:9000,e_phone:91245,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:0,e_youtube:0,e_toss_pay:0,e_baemin:0,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-01":{i_base:3175000,i_incentive:420000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:119810,i_employ:31000,i_income_tax:11980,i_local_tax:1190,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:252904,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:245880,e_rent:100000,e_internet:17000,e_mgmt:76620,e_gas:13000,e_phone:118580,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-02":{i_base:3175000,i_incentive:470000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:119810,i_employ:31450,i_income_tax:12470,i_local_tax:1240,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:246300,e_rent:100000,e_internet:17000,e_mgmt:75980,e_gas:11790,e_phone:131647,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:170000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-03":{i_base:3175000,i_incentive:500000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:119810,i_employ:31720,i_income_tax:12960,i_local_tax:1290,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:246300,e_rent:100000,e_internet:17000,e_mgmt:77820,e_gas:0,e_phone:122740,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-04":{i_base:3175000,i_incentive:400000,i_position:0,i_etc_wage:0,i_pension:132790,i_health:137770,i_employ:30820,i_income_tax:11740,i_local_tax:1170,i_health_adj:77820,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:261430,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:257260,e_rent:100000,e_internet:17000,e_mgmt:79060,e_gas:9700,e_phone:99320,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-05":{i_base:3175000,i_incentive:450000,i_position:0,i_etc_wage:56970,i_pension:132790,i_health:137770,i_employ:31780,i_income_tax:12960,i_local_tax:1290,i_health_adj:77820,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:10146,e_ins_daily:0,e_ins_life:0,e_loan:254790,e_rent:100000,e_internet:17000,e_mgmt:77130,e_gas:11770,e_phone:176590,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-06":{i_base:3265750,i_incentive:410000,i_position:200000,i_etc_wage:49750,i_pension:132790,i_health:137770,i_employ:33970,i_income_tax:16390,i_local_tax:1630,i_health_adj:77820,i_etc_ded:0,i_toss_p:0,i_toss_d:25000,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:76610,e_gas:8630,e_phone:155640,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-07":{i_base:3265750,i_incentive:600000,i_position:200000,i_etc_wage:0,i_pension:152280,i_health:137770,i_employ:39740,i_income_tax:249360,i_local_tax:24930,i_health_adj:0,i_etc_ded:0,i_toss_p:472141,i_toss_d:33234,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:254790,e_rent:100000,e_internet:17000,e_mgmt:85900,e_gas:7580,e_phone:123170,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-08":{i_base:3265750,i_incentive:750000,i_position:200000,i_etc_wage:0,i_pension:152280,i_health:137770,i_employ:36590,i_income_tax:203970,i_local_tax:20390,i_health_adj:0,i_etc_ded:0,i_toss_p:0,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:127710,e_gas:5520,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:2013784,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-09":{i_base:3265750,i_incentive:750000,i_position:200000,i_etc_wage:0,i_pension:152280,i_health:137770,i_employ:36590,i_income_tax:203970,i_local_tax:20390,i_health_adj:0,i_etc_ded:0,i_toss_p:10685,i_toss_d:0,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:108740,e_gas:6560,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:3300000,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-10":{i_base:3265750,i_incentive:600000,i_position:200000,i_etc_wage:0,i_pension:152280,i_health:137770,i_employ:35240,i_income_tax:182610,i_local_tax:18260,i_health_adj:0,i_etc_ded:0,i_toss_p:261174,i_toss_d:687,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:0,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:5520,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:0,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:3700000,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-11":{i_base:3265750,i_incentive:650000,i_position:200000,i_etc_wage:0,i_pension:152280,i_health:137770,i_employ:35690,i_income_tax:190620,i_local_tax:19060,i_health_adj:0,i_etc_ded:0,i_toss_p:153213,i_toss_d:3472,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:0,e_ins_life:0,e_loan:254790,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:6560,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:1000000,s_nh:0,s_isa:0,s_pension:0,_etcCount:0},
+  "2025-12":{i_base:3265750,i_incentive:800000,i_position:200000,i_etc_wage:300000,i_pension:152280,i_health:137770,i_employ:39740,i_income_tax:249360,i_local_tax:24930,i_health_adj:0,i_etc_ded:300000,i_toss_p:87908,i_toss_d:6960,i_namu_p:0,i_namu_d:0,i_ki_p:0,i_ki_d:0,e_ins_real:12482,e_ins_daily:10000,e_ins_life:61138,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:10710,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:187000,e_gym:234000,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:0,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:6000000,_etcCount:0},
+  "2026-01":{i_base:3265750,i_incentive:600000,i_position:200000,i_etc_wage:0,i_pension:160740,i_health:139950,i_employ:35240,i_income_tax:182610,i_local_tax:18260,i_health_adj:0,i_etc_ded:0,i_toss_p:538178,i_toss_d:4504,i_namu_p:825397,i_namu_d:16319,i_ki_p:0,i_ki_d:7800,e_ins_real:12482,e_ins_daily:10000,e_ins_life:61138,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:14850,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:170000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:1916250,s_toss_stock:550000,s_nh:0,s_isa:0,s_pension:500000,_etcCount:0},
+  "2026-02":{i_base:3265750,i_incentive:600000,i_position:200000,i_etc_wage:0,i_pension:160740,i_health:139950,i_employ:35240,i_income_tax:182610,i_local_tax:18260,i_health_adj:0,i_etc_ded:0,i_toss_p:12485,i_toss_d:1448,i_namu_p:0,i_namu_d:13642,i_ki_p:0,i_ki_d:66908,e_ins_real:12482,e_ins_daily:10000,e_ins_life:61138,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:25260,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:170000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:100000,s_toss_stock:550000,s_nh:0,s_isa:0,s_pension:500000,_etcCount:0},
+  "2026-03":{i_base:3265750,i_incentive:500000,i_position:200000,i_etc_wage:0,i_pension:160740,i_health:139950,i_employ:34340,i_income_tax:169260,i_local_tax:16920,i_health_adj:0,i_etc_ded:0,i_toss_p:5662,i_toss_d:21966,i_namu_p:9200,i_namu_d:24452,i_ki_p:0,i_ki_d:9200,e_ins_real:12482,e_ins_daily:10000,e_ins_life:61138,e_loan:237800,e_rent:100000,e_internet:17000,e_mgmt:0,e_gas:29530,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:170000,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:100000,s_toss_stock:500000,s_nh:0,s_isa:0,s_pension:500000,_etcCount:0},
+  "2026-04":{i_base:3265750,i_incentive:600000,i_position:200000,i_etc_wage:0,i_pension:160740,i_health:156050,i_employ:35240,i_income_tax:182610,i_local_tax:18260,i_health_adj:81360,i_etc_ded:0,i_toss_p:167274,i_toss_d:3989,i_namu_p:177890,i_namu_d:40593,i_ki_p:0,i_ki_d:13900,e_ins_real:12482,e_ins_daily:10000,e_ins_life:61138,e_loan:263280,e_rent:100000,e_internet:17000,e_mgmt:83100,e_gas:13890,e_phone:0,e_family:0,e_shopping:0,e_trans:0,e_living_etc:0,e_tennis:0,e_gym:0,e_food:0,e_coupang:7000,e_youtube:5103,e_toss_pay:5000,e_baemin:1990,s_toss_save:300000,s_toss_emg:100000,s_toss_stock:0,s_nh:0,s_isa:0,s_pension:500000,_etcCount:0}
+};
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+let curYear=2026, curMonth=3;
+let allData={}, etcCount=0;
+let iChart, eChart, tChart;
+
+const FIELD_IDS=['i_base','i_incentive','i_position','i_etc_wage','i_pension','i_health','i_employ','i_income_tax','i_local_tax','i_health_adj','i_etc_ded','i_toss_p','i_toss_d','i_namu_p','i_namu_d','i_ki_p','i_ki_d','e_ins_real','e_ins_daily','e_ins_life','e_loan','e_rent','e_internet','e_mgmt','e_gas','e_phone','e_family','e_shopping','e_trans','e_living_etc','e_tennis','e_gym','e_food','e_coupang','e_youtube','e_toss_pay','e_baemin','s_toss_save','s_toss_emg','s_toss_stock','s_nh','s_isa','s_pension'];
+
+// ═══════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════
+const fmt = v => Math.round(v).toLocaleString('ko-KR') + '원';
+const fmtK = v => {
+  const a = Math.abs(v);
+  if(a >= 100000000) return (v<0?'-':'') + (a/100000000).toFixed(1) + '억원';
+  if(a >= 10000000)  return (v<0?'-':'') + (a/10000000).toFixed(1) + '천만원';
+  if(a >= 10000)     return (v<0?'-':'') + (a/10000).toFixed(1) + '만원';
+  return fmt(v);
+};
+const monthKey = (y,m) => `${y}-${String(m+1).padStart(2,'0')}`;
+const g = id => parseFloat(document.getElementById(id)?.value) || 0;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ═══════════════════════════════════
+// CARD TOGGLE
+// ═══════════════════════════════════
+function toggleCard(hdr) {
+  const body = hdr.nextElementSibling;
+  const chev = hdr.querySelector('.chev');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+// ═══════════════════════════════════
+// CALC
+// ═══════════════════════════════════
+function calc() {
+  const gross = g('i_base')+g('i_incentive')+g('i_position')+g('i_etc_wage');
+  const ded = g('i_pension')+g('i_health')+g('i_employ')+g('i_income_tax')+g('i_local_tax')+g('i_health_adj')+g('i_etc_ded');
+  const laborNet = gross - ded;
+  document.getElementById('i_labor_net').textContent = fmt(laborNet);
+  document.getElementById('i_labor_hd').textContent = fmtK(laborNet);
+
+  const stockTotal = g('i_toss_p')+g('i_toss_d')+g('i_namu_p')+g('i_namu_d')+g('i_ki_p')+g('i_ki_d');
+  document.getElementById('i_stock_total').textContent = fmt(stockTotal);
+  document.getElementById('i_stock_hd').textContent = fmtK(stockTotal);
+
+  let etcTotal = 0;
+  for(let i=0; i<etcCount; i++) etcTotal += parseFloat(document.getElementById(`etc_val_${i}`)?.value) || 0;
+  document.getElementById('i_etc_total').textContent = fmt(etcTotal);
+  document.getElementById('i_etc_hd').textContent = fmtK(etcTotal);
+
+  const totalIncome = laborNet + stockTotal + etcTotal;
+
+  const fixedTotal = g('e_ins_real')+g('e_ins_daily')+g('e_ins_life')+g('e_loan')+g('e_rent')+g('e_internet')+g('e_mgmt')+g('e_gas');
+  const livingTotal = g('e_phone')+g('e_family')+g('e_shopping')+g('e_trans')+g('e_living_etc');
+  const exerciseTotal = g('e_tennis')+g('e_gym');
+  const foodTotal = g('e_food');
+  const subTotal = g('e_coupang')+g('e_youtube')+g('e_toss_pay')+g('e_baemin');
+  const savingTotal = g('s_toss_save')+g('s_toss_emg')+g('s_toss_stock')+g('s_nh')+g('s_isa')+g('s_pension');
+  const totalExpense = fixedTotal + livingTotal + exerciseTotal + foodTotal + subTotal;
+
+  [['fixed',fixedTotal],['living',livingTotal],['exercise',exerciseTotal],['food',foodTotal],['sub',subTotal]].forEach(([k,v])=>{
+    document.getElementById(`e_${k}_hd`).textContent = fmtK(v);
+    document.getElementById(`e_${k}_total`).textContent = fmt(v);
+  });
+  document.getElementById('e_saving_hd').textContent = fmtK(savingTotal);
+  document.getElementById('e_saving_total').textContent = fmt(savingTotal);
+
+  const net = totalIncome - totalExpense - savingTotal;
+  const savePct = totalIncome > 0 ? Math.round(savingTotal/totalIncome*100) : 0;
+
+  document.getElementById('sm_income').textContent = fmtK(totalIncome);
+  document.getElementById('sm_expense').textContent = fmtK(totalExpense);
+  document.getElementById('sm_saving').textContent = fmtK(savingTotal);
+  const smNet = document.getElementById('sm_net');
+  smNet.textContent = fmtK(net);
+  smNet.style.color = net >= 0 ? '#085041' : '#993C1D';
+
+  if(document.getElementById('overviewTab').classList.contains('active')) {
+    updateOverview(totalIncome, totalExpense, savingTotal, fixedTotal, livingTotal, exerciseTotal, foodTotal, subTotal, net, savePct, laborNet, stockTotal, etcTotal);
+  }
+  return {totalIncome, totalExpense, savingTotal, net, fixedTotal, livingTotal, exerciseTotal, foodTotal, subTotal, laborNet, stockTotal, etcTotal};
+}
+
+// ═══════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════
+function updateOverview(totalIncome, totalExpense, savingTotal, fixedTotal, livingTotal, exerciseTotal, foodTotal, subTotal, net, savePct, laborNet, stockTotal, etcTotal) {
+  const netEl = document.getElementById('ov_net');
+  netEl.textContent = fmt(net);
+  netEl.style.color = net >= 0 ? '#0F6E56' : '#993C1D';
+  document.getElementById('ov_save_rate').textContent = savePct + '%';
+
+  const cats = [
+    {label:'고정지출', val:fixedTotal, budget:543000, color:'#D85A30'},
+    {label:'생활비',   val:livingTotal, budget:560000, color:'#BA7517'},
+    {label:'운동',     val:exerciseTotal, budget:206500, color:'#3B6D11'},
+    {label:'식비',     val:foodTotal, budget:450000, color:'#993556'},
+    {label:'구독',     val:subTotal, budget:20883, color:'#888780'},
+    {label:'저축/투자',val:savingTotal, budget:1200000, color:'#185FA5'},
+  ];
+  const ps = document.getElementById('progSection');
+  ps.innerHTML = '';
+  cats.forEach(c => {
+    const isSaving = c.label === '저축/투자';
+    const over = !isSaving && c.val > c.budget;
+    const pct = c.budget > 0 ? Math.min(Math.round(c.val/c.budget*100), 100) : 0;
+    const badge = over
+      ? `<span class="pbadge" style="background:#FAECE7;color:#993C1D">초과</span>`
+      : `<span class="pbadge" style="background:#EAF3DE;color:#3B6D11">양호</span>`;
+    ps.innerHTML += `<div class="prog-item">
+      <div class="prog-head">
+        <span class="plabel">${c.label}</span>
+        <span class="pval">${fmt(c.val)} <span style="color:#8A8780;font-weight:400">/ ${fmt(c.budget)}</span>${badge}</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${over?'#D85A30':c.color}"></div></div>
+    </div>`;
+  });
+
+  const colors1 = ['#1D9E75','#378ADD','#7F77DD'];
+  const colors2 = ['#D85A30','#BA7517','#3B6D11','#993556','#888780','#185FA5'];
+
+  if(iChart) iChart.destroy();
+  if(eChart) eChart.destroy();
+  if(tChart) tChart.destroy();
+
+  const iData = [laborNet, stockTotal, etcTotal].map(v => Math.max(v, 0));
+  const iLabels = ['근로소득','주식소득','기타수입'];
+  iChart = new Chart(document.getElementById('incomeChart'), {
+    type:'doughnut',
+    data:{labels:iLabels, datasets:[{data:iData, backgroundColor:colors1, borderWidth:0}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>{const t=iData.reduce((a,b)=>a+b,0);return` ${ctx.label}: ${fmt(ctx.raw)} (${t>0?Math.round(ctx.raw/t*100):0}%)`}}}}}
+  });
+  const iLeg = document.getElementById('incomeLegend');
+  iLeg.innerHTML = '';
+  const iTot = iData.reduce((a,b)=>a+b,0);
+  iLabels.forEach((l,i) => iLeg.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${colors1[i]}"></div>${l}: ${iTot>0?Math.round(iData[i]/iTot*100):0}%</div>`);
+
+  const eData = [fixedTotal, livingTotal, exerciseTotal, foodTotal, subTotal, savingTotal].map(v => Math.max(v,0));
+  const eLabels = ['고정지출','생활비','운동','식비','구독','저축/투자'];
+  eChart = new Chart(document.getElementById('expenseChart'), {
+    type:'doughnut',
+    data:{labels:eLabels, datasets:[{data:eData, backgroundColor:colors2, borderWidth:0}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>{const t=eData.reduce((a,b)=>a+b,0);return` ${ctx.label}: ${fmt(ctx.raw)} (${t>0?Math.round(ctx.raw/t*100):0}%)`}}}}}
+  });
+  const eLeg = document.getElementById('expenseLegend');
+  eLeg.innerHTML = '';
+  const eTot = eData.reduce((a,b)=>a+b,0);
+  eLabels.forEach((l,i) => eLeg.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${colors2[i]}"></div>${l}: ${eTot>0?Math.round(eData[i]/eTot*100):0}%</div>`);
+
+  const allKeys = [...new Set([...Object.keys(XLSX_DATA), ...Object.keys(allData)])].sort();
+  const tLabels = allKeys.map(k => k.slice(5)+'월');
+  const tIncome = allKeys.map(k => calcFrom(allData[k] || XLSX_DATA[k]).totalIncome);
+  const tOut = allKeys.map(k => { const d = calcFrom(allData[k] || XLSX_DATA[k]); return d.totalExpense + d.savingTotal; });
+  tChart = new Chart(document.getElementById('trendChart'), {
+    type:'bar',
+    data:{labels:tLabels, datasets:[{label:'수익',data:tIncome,backgroundColor:'#5DCAA5',borderRadius:3},{label:'지출+저축',data:tOut,backgroundColor:'#F0997B',borderRadius:3}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{
+        y:{ticks:{callback:v=>Math.round(v/10000)+'만',font:{size:10}}, grid:{color:'rgba(0,0,0,.05)'}},
+        x:{ticks:{font:{size:9}}, grid:{display:false}}
+      },
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtK(ctx.raw)}`}}}
+    }
+  });
+}
+
+function calcFrom(data) {
+  if(!data) return {totalIncome:0, totalExpense:0, savingTotal:0, net:0};
+  const g2 = id => parseFloat(data[id]) || 0;
+  const gross = g2('i_base')+g2('i_incentive')+g2('i_position')+g2('i_etc_wage');
+  const ded = g2('i_pension')+g2('i_health')+g2('i_employ')+g2('i_income_tax')+g2('i_local_tax')+g2('i_health_adj')+g2('i_etc_ded');
+  const laborNet = gross - ded;
+  const stockTotal = g2('i_toss_p')+g2('i_toss_d')+g2('i_namu_p')+g2('i_namu_d')+g2('i_ki_p')+g2('i_ki_d');
+  let etcTotal = 0; const cnt = data._etcCount||0; for(let i=0;i<cnt;i++) etcTotal += parseFloat(data[`etc_val_${i}`])||0;
+  const totalIncome = laborNet + stockTotal + etcTotal;
+  const fixedTotal = g2('e_ins_real')+g2('e_ins_daily')+g2('e_ins_life')+g2('e_loan')+g2('e_rent')+g2('e_internet')+g2('e_mgmt')+g2('e_gas');
+  const livingTotal = g2('e_phone')+g2('e_family')+g2('e_shopping')+g2('e_trans')+g2('e_living_etc');
+  const exerciseTotal = g2('e_tennis')+g2('e_gym');
+  const foodTotal = g2('e_food');
+  const subTotal = g2('e_coupang')+g2('e_youtube')+g2('e_toss_pay')+g2('e_baemin');
+  const savingTotal = g2('s_toss_save')+g2('s_toss_emg')+g2('s_toss_stock')+g2('s_nh')+g2('s_isa')+g2('s_pension');
+  const totalExpense = fixedTotal+livingTotal+exerciseTotal+foodTotal+subTotal;
+  return {totalIncome, totalExpense, savingTotal, net:totalIncome-totalExpense-savingTotal};
+}
+
+// ═══════════════════════════════════
+// DATA I/O
+// ═══════════════════════════════════
+function getFields() {
+  const data = {};
+  FIELD_IDS.forEach(id => { const el = document.getElementById(id); if(el) data[id] = parseFloat(el.value)||0; });
+  for(let i=0; i<etcCount; i++) {
+    const l = document.getElementById(`etc_label_${i}`), v = document.getElementById(`etc_val_${i}`);
+    if(l&&v) { data[`etc_label_${i}`] = l.value; data[`etc_val_${i}`] = parseFloat(v.value)||0; }
+  }
+  data._etcCount = etcCount;
+  return data;
+}
+
+function setFields(data) {
+  FIELD_IDS.forEach(id => { const el = document.getElementById(id); if(el) el.value = data?.[id] || ''; });
+  etcCount = 0;
+  document.getElementById('etcRows').innerHTML = '';
+  const cnt = data?._etcCount || 0;
+  for(let i=0; i<cnt; i++) {
+    addEtc();
+    const l = document.getElementById(`etc_label_${i}`), v = document.getElementById(`etc_val_${i}`);
+    if(l) l.value = data[`etc_label_${i}`] || '';
+    if(v) v.value = data[`etc_val_${i}`] || '';
+  }
+  calc();
+}
+
+function saveMonth() {
+  const key = monthKey(curYear, curMonth);
+  allData[key] = getFields();
+  try { localStorage.setItem('budget_v4', JSON.stringify(allData)); } catch(e) {}
+  const btn = document.getElementById('saveBtn');
+  btn.classList.add('saved');
+  btn.innerHTML = '<i class="ti ti-check" style="font-size:15px"></i> 저장됨';
+  setTimeout(() => {
+    btn.classList.remove('saved');
+    btn.innerHTML = '<i class="ti ti-device-floppy" style="font-size:15px"></i> 저장';
+  }, 1800);
+  showToast(`${curYear}년 ${MONTHS[curMonth]} 저장 완료`);
+}
+
+function loadData() {
+  try { const s = localStorage.getItem('budget_v4'); if(s) allData = JSON.parse(s); } catch(e) {}
+}
+
+function loadMonth() {
+  document.getElementById('monthLabel').textContent = `${curYear}년 ${MONTHS[curMonth]}`;
+  const key = monthKey(curYear, curMonth);
+  setFields(allData[key] || XLSX_DATA[key] || null);
+}
+
+function changeMonth(dir) {
+  saveMonth();
+  curMonth += dir;
+  if(curMonth < 0) { curMonth = 11; curYear--; }
+  if(curMonth > 11) { curMonth = 0; curYear++; }
+  loadMonth();
+}
+
+// ═══════════════════════════════════
+// TABS
+// ═══════════════════════════════════
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tab + 'Tab').classList.add('active');
+  el.classList.add('active');
+  if(tab === 'overview') {
+    const r = calc();
+    updateOverview(r.totalIncome, r.totalExpense, r.savingTotal, r.fixedTotal, r.livingTotal, r.exerciseTotal, r.foodTotal, r.subTotal, r.net, r.totalIncome>0?Math.round(r.savingTotal/r.totalIncome*100):0, r.laborNet, r.stockTotal, r.etcTotal);
+  }
+}
+
+// ═══════════════════════════════════
+// 기타수입 동적 추가
+// ═══════════════════════════════════
+function addEtc() {
+  const c = document.getElementById('etcRows');
+  const i = etcCount++;
+  const d = document.createElement('div');
+  d.className = 'row'; d.id = `etc_row_${i}`;
+  d.innerHTML = `
+    <input style="flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:13px;background:var(--bg);color:var(--text1);font-family:var(--font)" id="etc_label_${i}" placeholder="항목명" oninput="calc()">
+    <input class="row-input" id="etc_val_${i}" type="number" placeholder="0" oninput="calc()">
+    <button class="etc-del-btn" onclick="document.getElementById('etc_row_${i}').remove();calc()" aria-label="삭제"><i class="ti ti-x"></i></button>`;
+  c.appendChild(d);
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+loadData();
+loadMonth();
+</script>
+</body>
+</html>
